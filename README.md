@@ -13,7 +13,7 @@ Description:
 Image sharpness is a difficult measure. Typical methods use Fourier Analysis, 
 applying some sort of convolution sometimes and then doing statistics. 
 
-I found using Acutance to provide some decent fuzzy benchmarks on how sharp an image is. The fuzzy nature comes in handy when your comparing images with completely different content
+I found using Acutance to provide some decent broad benchmarks on how sharp an image is. It comes in handy when your comparing images with completely different content
 
 It is also far easier algorithmically, providing some sort of performance gain 
 (however using php kind of erases that)
