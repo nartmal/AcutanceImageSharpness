@@ -28,4 +28,5 @@ TODO:
 Examples
 Input as URL instead of local file
 Exception Catching
+Composer Package?
 
