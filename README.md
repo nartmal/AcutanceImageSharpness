@@ -2,9 +2,11 @@ AcutanceImageSharpness
 ======================
 
 Image Sharpness By Method of Acutance
-
-
 By Lam Tran
+
+
+http://en.wikipedia.org/wiki/Acutance
+
 
 
 Description:
