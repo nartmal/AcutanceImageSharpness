@@ -22,6 +22,7 @@ It is also far easier algorithmically, providing some sort of performance gain
 HOW TO USE:
 
 $class = new Acutance($file_location);//urls work but you have to beware of DNS/host file issues
+
 $result = $class->process();
 
 
