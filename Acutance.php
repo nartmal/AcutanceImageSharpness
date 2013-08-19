@@ -1,5 +1,3 @@
-<?php
-
 /*
  * A measure of image sharpness
  * REQUIRES GD IMAGE LIBRARY (its pretty standard)
@@ -8,47 +6,49 @@
 
 
 class Acutance {
-
+    /** @access public */
     public $_width;
     public $_height;
-    public $_image_set;
-    public $_file_location;
+    public $_file_location = false;
+    /** @access private */
     private $intensity_mode;
-
-    public function __construct($file_location = false) {
-        $this->_file_location = $file_location;
-        if ($file_location !== false) {
-            $this->_image_set = true;
-        }
-        $this->intensity_mode = 'luminosity';
+    /** @const */
+    private static $ALLOWED_METHODS = array('luminosity', 'average');
+    private static $INTENSITY_SETTINGS = array('luminosity'=>array('r'=>.21, 'g'=>.71,'b'=>.07),
+                                               'average'=>array('r'=>.33333,'g'=>.33333,'b'=>.33333)
+                                         );
+    public function __construct($file_location = false, $isUrl=false) {
+        //keep it dry
+        $this->setFileLocation($file_location, $isUrl);
+        $this->setPixelIntensityMethod('luminosity');
     }
 
     public function setPixelIntensityMethod($method) {
-        $allowed_values = array('luminosity', 'average');
-        if (in_array($method, $allowed_values)) {
+        if (in_array($method, self::$ALLOWED_METHODS)) {
             $this->intensity_mode = $method;
         }
     }
-
-    public function setFileLocation($file_location) {
-        $this->_file_location = $file_location;
-        if ($file_location !== false) {
-            $this->_image_set = true;
+    
+    public function setFileLocation($file_location, $isUrl=false) {
+        if ($file_location && $file_location !== null) {
+            //if the string is a url then replaces spaces it to be safe for getimagesize and imagecratefromjpeg
+            //else just leave it alone
+            $this->_file_location =  $isUrl?str_replace(' ', '%20', $file_location):$file_location;
         }
     }
 
     public function process() {
-        if ($this->_image_set == true) {
+        if ($this->_file_location){
+            //Since getimagesize and imagecreatefromjpeg both return false if there is a error this can be used for error checking
             $size = getimagesize($this->_file_location);
-            $this->_width = $size[0];
-            $this->_height = $size[1];
-            $this->_image_set = true;
-
             $image = imagecreatefromjpeg($this->_file_location);
-            return $this->findSharpness($image);
-        } else {
-            return -1;
+            if($size && $image){
+                $this->_width = $size[0];
+                $this->_height = $size[1];
+                return $this->findSharpness($image);
+            }
         }
+        return -1;
     }
 
     private function getRGB($im, $x, $y) {
@@ -61,11 +61,13 @@ class Acutance {
     }
 
     private function getIntensity($rgb) {
-        if ($this->intensity_mode == 'average') {
-            return (.33333 * $rgb['r']) + (.33333 * $rgb['g']) + (.33333 * $rgb['b']);
-        } elseif ($this->intensity_mode == 'luminosity') {
-            return (.21 * $rgb['r']) + (.71 * $rgb['g']) + (.07 * $rgb['b']);
-        }
+        $mode = $this->intensity_mode;
+        //I think this is better than a elseif, but I could be wrong.
+        $intensity = (self::$INTENSITY_SETTINGS[$mode]['r']*$rgb['r'])+
+                     (self::$INTENSITY_SETTINGS[$mode]['g']*$rgb['g'])+
+                     (self::$INTENSITY_SETTINGS[$mode]['b']*$rgb['b']);
+        return $intensity;
+
     }
 
     private function findSharpness($image) {
@@ -90,11 +92,8 @@ class Acutance {
         }
         if ($pixel_count > 0) {
             return ($running_total / $pixel_count);
-        } else {
-            return -1; //error
         }
+        //got rid of redudent else
+        return -1; //error
     }
-
 }
-
-?>
