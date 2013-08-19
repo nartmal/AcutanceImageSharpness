@@ -1,3 +1,5 @@
+<?php
+
 /*
  * A measure of image sharpness
  * REQUIRES GD IMAGE LIBRARY (its pretty standard)
@@ -9,9 +11,10 @@ class Acutance {
     /** @access public */
     public $_width;
     public $_height;
-    public $_file_location = false;
     /** @access private */
     private $intensity_mode;
+    //we don't want this changed out of scope. We already have a setter.
+    private $file_location = false;
     /** @const */
     private static $ALLOWED_METHODS = array('luminosity', 'average');
     private static $INTENSITY_SETTINGS = array('luminosity'=>array('r'=>.21, 'g'=>.71,'b'=>.07),
@@ -33,15 +36,15 @@ class Acutance {
         if ($file_location && $file_location !== null) {
             //if the string is a url then replaces spaces it to be safe for getimagesize and imagecratefromjpeg
             //else just leave it alone
-            $this->_file_location =  $isUrl?str_replace(' ', '%20', $file_location):$file_location;
+            $this->file_location =  $isUrl?str_replace(' ', '%20', $file_location):$file_location;
         }
     }
 
     public function process() {
-        if ($this->_file_location){
+        if ($this->file_location){
             //Since getimagesize and imagecreatefromjpeg both return false if there is a error this can be used for error checking
-            $size = getimagesize($this->_file_location);
-            $image = imagecreatefromjpeg($this->_file_location);
+            $size = getimagesize($this->file_location);
+            $image = imagecreatefromjpeg($this->file_location);
             if($size && $image){
                 $this->_width = $size[0];
                 $this->_height = $size[1];
@@ -97,3 +100,4 @@ class Acutance {
         return -1; //error
     }
 }
+?>
