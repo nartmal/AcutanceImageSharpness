@@ -96,7 +96,7 @@ class Acutance {
         if ($pixel_count > 0) {
             return ($running_total / $pixel_count);
         }
-        //got rid of redudent else
+        //got rid of redundant else
         return -1; //error
     }
 }
