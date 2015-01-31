@@ -8,96 +8,101 @@
 
 
 class Acutance {
-    /** @access public */
-    public $_width;
-    public $_height;
-    /** @access private */
-    private $intensity_mode;
-    //we don't want this changed out of scope. We already have a setter.
-    private $file_location = false;
-    /** @const */
-    private static $ALLOWED_METHODS = array('luminosity', 'average');
-    private static $INTENSITY_SETTINGS = array('luminosity'=>array('r'=>.21, 'g'=>.71,'b'=>.07),
-                                               'average'=>array('r'=>.33333,'g'=>.33333,'b'=>.33333)
-                                         );
-    public function __construct($file_location = false, $isUrl=false) {
-        //keep it dry
-        $this->setFileLocation($file_location, $isUrl);
-        $this->setPixelIntensityMethod('luminosity');
-    }
-
-    public function setPixelIntensityMethod($method) {
-        if (in_array($method, self::$ALLOWED_METHODS)) {
-            $this->intensity_mode = $method;
-        }
-    }
     
-    public function setFileLocation($file_location, $isUrl=false) {
-        if ($file_location && $file_location !== null) {
-            //if the string is a url then replaces spaces it to be safe for getimagesize and imagecratefromjpeg
-            //else just leave it alone
-            $this->file_location =  $isUrl?str_replace(' ', '%20', $file_location):$file_location;
-        }
-    }
+    const LUMINOSITY = 1;
+    const RGB_AVERAGE = 2;
 
-    public function process() {
-        if ($this->file_location){
-            //Since getimagesize and imagecreatefromjpeg both return false if there is a error this can be used for error checking
-            $size = getimagesize($this->file_location);
-            $image = imagecreatefromjpeg($this->file_location);
-            if($size && $image){
-                $this->_width = $size[0];
-                $this->_height = $size[1];
-                return $this->findSharpness($image);
+    public static function calculate($fileLocation, $deltas = array(1,2,3), $greyScaleMode = 1){
+        $size = getimagesize($fileLocation);
+        $image = imagecreatefromjpeg($fileLocation);
+
+        $width = $size[0];
+        $height = $size[1];
+
+        $sum = array("x"=>array(),"y"=>array());
+        $counter = array("x"=>array(),"y"=>array());
+
+        foreach($deltas as $delta){
+            $sum["x"][$delta] = 0;
+            $sum["y"][$delta] = 0;
+            $sum["d"][$delta] = 0;
+            $counter["x"][$delta] = 0;
+            $counter["y"][$delta] = 0;
+            $counter["d"][$delta] = 0;
+        }
+
+        for($x = 1; $x < $width; $x++){
+            for($y = 1; $y < $height; $y++){
+
+                foreach($deltas as $delta){
+                    //truncate calculations if its too close to border
+                    if($x + $delta < $width 
+                        && $x - $delta > 0 
+                        && $y + $delta < $height 
+                        && $y - $delta > 0){
+                        
+                        //$rgb = imagecolorat($image, $x, $y);
+                        $left = self::getIntensity(imagecolorat($image, $x - $delta, $y), $greyScaleMode);
+                        $right =self::getIntensity( imagecolorat($image, $x + $delta, $y), $greyScaleMode);
+                        $top = self::getIntensity(imagecolorat($image, $x, $y + $delta), $greyScaleMode);
+                        $bottom = self::getIntensity(imagecolorat($image, $x, $y - $delta), $greyScaleMode);
+
+                        $dx = (float)($left - $right)/(2.*$delta);
+                        $dy = (float)($bottom - $top)/(2.*$delta);
+
+                        $sum["x"][$delta] += abs($dx);
+                        $sum["y"][$delta] += abs($dy);
+                        $sum["d"][$delta] += sqrt(($dx*$dx) + ($dy*$dy));               
+ 
+                        $counter["x"][$delta]++;
+                        $counter["y"][$delta]++; //because im too lazy to pre-calculate from dimensions
+                        $counter["d"][$delta]++;
+
+                    }
+
+
+                }
+
             }
         }
-        return -1;
+        
+
+        $returnArray = array(
+            "dx_avg_amplitude" => array(),
+            "dy_avg_amplitude" => array(),
+            "acutance" => array(),
+        );
+
+
+        foreach($deltas as $delta){
+            $returnArray["dx_avg_amplitude"][] = (float)$sum["x"][$delta]/$counter["x"][$delta];
+            $returnArray["dy_avg_amplitude"][] = (float)$sum["y"][$delta]/$counter["y"][$delta];
+            $returnArray["acutance"][] = (float)$sum["d"][$delta]/$counter["d"][$delta];
+        }
+
+
+        return $returnArray;
+
+
     }
 
-    private function getRGB($im, $x, $y) {
-        $rgb = imagecolorat($im, $x, $y);
+    private static function getIntensity($rgb,$mode){
         $r = ($rgb >> 16) & 0xFF;
         $g = ($rgb >> 8) & 0xFF;
         $b = $rgb & 0xFF;
 
-        return array("r" => $r, "g" => $g, "b" => $b);
-    }
-
-    private function getIntensity($rgb) {
-        $mode = $this->intensity_mode;
-        //I think this is better than a elseif, but I could be wrong.
-        $intensity = (self::$INTENSITY_SETTINGS[$mode]['r']*$rgb['r'])+
-                     (self::$INTENSITY_SETTINGS[$mode]['g']*$rgb['g'])+
-                     (self::$INTENSITY_SETTINGS[$mode]['b']*$rgb['b']);
-        return $intensity;
-
-    }
-
-    private function findSharpness($image) {
-        $pixel_count = 0;
-        $running_total = 0;
-        for ($x = 1; $x < $this->_width - 2; $x++) {
-            for ($y = 1; $y < $this->_height - 2; $y++) {
-                $xy = $this->getIntensity($this->getRGB($image, $x, $y));
-
-                $x1 = $this->getIntensity($this->getRGB($image, $x - 1, $y));
-                $x2 = $this->getIntensity($this->getRGB($image, $x + 1, $y));
-                $y1 = $this->getIntensity($this->getRGB($image, $x, $y - 1));
-                $y2 = $this->getIntensity($this->getRGB($image, $x, $y + 1));
-
-                $dx = (abs($x1 - $xy) + abs($x2 - $xy)) / 2;
-                $dy = (abs($y1 - $xy) + abs($y2 - $xy)) / 2;
-
-                $amplitude = sqrt(($dx * $dx) + ($dy * $dy));
-                $pixel_count++;
-                $running_total += $amplitude;
-            }
+        switch($mode){
+            case self::LUMINOSITY:
+                return (.21*$r) + (.71*$g) + (.07*$b);
+            case self::RGB_AVERAGE:
+                return (.333*$r) + (.333*$g) + (.333*$b);
+            default:
+                throw new \Exception("invalid greyscale mode!");
         }
-        if ($pixel_count > 0) {
-            return ($running_total / $pixel_count);
-        }
-        //got rid of redundant else
-        return -1; //error
+
     }
+
+
+
 }
-?>
+
