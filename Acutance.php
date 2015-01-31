@@ -13,7 +13,7 @@ class Acutance {
     const RGB_AVERAGE = 2;
     const RGB_MAX = 3;
 
-    public static function calculate($fileLocation, $deltas = array(1,2,3,4), $greyScaleMode = 2, $blur = false){
+    public static function calculate($fileLocation, $deltas = array(1,2,3,4), $greyScaleMode = 2, $blur = false, $thresholding = 10.){
         $size = getimagesize($fileLocation);
         $image = imagecreatefromjpeg($fileLocation);
         
@@ -81,8 +81,9 @@ class Acutance {
                         */
 
 
-                        /*
-                        //SOBEL 
+                        ///*
+                        //SOBEL
+                        $w = self::getIntensity(imagecolorat($image, $x - $delta, $y), $greyScaleMode);
                         $e = self::getIntensity( imagecolorat($image, $x + $delta, $y), $greyScaleMode);
                         $n = self::getIntensity(imagecolorat($image, $x, $y + $delta), $greyScaleMode);
                         $s = self::getIntensity(imagecolorat($image, $x, $y - $delta), $greyScaleMode);
@@ -93,12 +94,13 @@ class Acutance {
                         $se = self::getIntensity(imagecolorat($image, $x + $delta, $y - $delta), $greyScaleMode);
 
 
-                        $dx = (float)(($nw+(2*$w)+$sw) - ($ne+(2*$e)+$se))/(2.*$delta);
-                        $dy = (float)(($nw+(2*$n)+$ne) - ($sw+(2*$s)+$sw))/(2.*$delta);
-                        */
+                        $dx = .18 * (float)(($nw+(2*$w)+$sw) - ($ne+(2*$e)+$se))/(2.*$delta);
+                        $dy = .18 * (float)(($nw+(2*$n)+$ne) - ($sw+(2*$s)+$sw))/(2.*$delta);
+                        //*/
 
+                
 
-                        ///*
+                        /*
                         //LOG SOBEL 
                         $e = self::getIntensity( imagecolorat($image, $x + $delta, $y), $greyScaleMode);
                         $n = self::getIntensity(imagecolorat($image, $x, $y + $delta), $greyScaleMode);
@@ -112,12 +114,19 @@ class Acutance {
 
                         $dx = (float)(($nw+(2*$w)+$sw) - ($ne+(2*$e)+$se))/(2.*$delta);
                         $dy = (float)(($nw+(2*$n)+$ne) - ($sw+(2*$s)+$sw))/(2.*$delta);
-                        //*/
+                        */
 
-                        $sum["x"][$delta] += log(1.+abs($dx));
-                        $sum["y"][$delta] += log(1.+abs($dy));
-                        $sum["d"][$delta] += sqrt(($dx*$dx) + ($dy*$dy));               
- 
+                
+                        //echo ((abs($dx) > $thresholding) ? abs($dx) : 0.) . "\t" . ((abs($dy) > $thresholding) ? abs($dy) : 0.) . "\n";
+
+
+                        $sum["x"][$delta] += (abs($dx) > $thresholding) ? abs($dx) : 0.;
+                        $sum["y"][$delta] += (abs($dy) > $thresholding) ? abs($dy) : 0.;
+                        $d = sqrt(($dx*$dx) + ($dy*$dy));               
+                        $sum["d"][$delta] += ($d > $thresholding) ? $d : 0.; 
+
+
+
                         $counter["x"][$delta]++;
                         $counter["y"][$delta]++; //because im too lazy to pre-calculate from dimensions
                         $counter["d"][$delta]++;
