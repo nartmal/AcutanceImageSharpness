@@ -13,7 +13,7 @@ class Acutance {
     const RGB_AVERAGE = 2;
     const RGB_MAX = 3;
 
-    public static function calculate($fileLocation, $deltas = array(1,2,3,4), $greyScaleMode = 2, $blur = false, $thresholding = 10.){
+    public static function calculate($fileLocation, $deltas = array(1,2,3,4,5,6), $greyScaleMode = 2, $blur = false, $thresholding = 10.){
         $size = getimagesize($fileLocation);
         $image = imagecreatefromjpeg($fileLocation);
         
